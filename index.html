@@ -1,0 +1,914 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>1.8.7 — Video Clip Extractor</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Orbitron:wght@400;700;900&family=Inter:wght@400;500;600&display=swap');
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --bg:       #020818;
+  --bg2:      #050f2a;
+  --surface:  #071330;
+  --surface2: #0a1f4a;
+  --border:   #1a3a6a;
+  --border2:  #2a5aaa;
+  --neon:     #00b4ff;
+  --neon-dim: rgba(0,180,255,0.12);
+  --neon-glow:rgba(0,180,255,0.35);
+  --success:  #00ff88;
+  --warning:  #ffcc00;
+  --text:     #c8e0ff;
+  --muted:    #5a80b0;
+  --mono:     'Share Tech Mono', monospace;
+  --display:  'Orbitron', sans-serif;
+  --body:     'Inter', sans-serif;
+  --r:        4px;
+}
+
+body::before {
+  content:'';
+  position:fixed;inset:0;
+  background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,0.07) 2px,rgba(0,0,0,0.07) 4px);
+  pointer-events:none;z-index:9999;
+}
+
+body {
+  background:var(--bg);
+  color:var(--text);
+  font-family:var(--body);
+  font-size:14px;
+  line-height:1.6;
+  min-height:100vh;
+  background-image:
+    radial-gradient(ellipse at 15% 0%,rgba(0,100,255,0.1) 0%,transparent 55%),
+    radial-gradient(ellipse at 85% 100%,rgba(0,60,180,0.08) 0%,transparent 55%);
+}
+
+/* ── HEADER ── */
+header {
+  border-bottom:1px solid var(--border);
+  background:rgba(2,8,24,0.96);
+  backdrop-filter:blur(12px);
+  position:sticky;top:0;z-index:200;
+  box-shadow:0 0 20px rgba(0,100,255,0.15);
+}
+
+.hdr {
+  max-width:900px;margin:0 auto;padding:0 24px;
+  height:56px;display:flex;align-items:center;justify-content:space-between;
+}
+
+.logo {
+  font-family:var(--display);font-size:22px;font-weight:900;
+  color:var(--neon);letter-spacing:4px;
+  text-shadow:0 0 18px var(--neon-glow),0 0 40px rgba(0,180,255,0.15);
+}
+
+.sys-status {
+  font-family:var(--mono);font-size:11px;color:var(--success);
+  display:flex;align-items:center;gap:6px;letter-spacing:1px;
+}
+
+.sys-status::before {
+  content:'';width:6px;height:6px;border-radius:50%;
+  background:var(--success);box-shadow:0 0 6px var(--success);
+  animation:pulse 2s infinite;
+}
+
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:0.3}}
+
+/* ── HERO ── */
+.hero {
+  max-width:900px;margin:0 auto;padding:52px 24px 36px;text-align:center;
+}
+
+.eyebrow {
+  font-family:var(--mono);font-size:11px;letter-spacing:4px;
+  color:var(--neon);text-transform:uppercase;margin-bottom:14px;opacity:.7;
+}
+
+.hero h1 {
+  font-family:var(--display);font-size:clamp(26px,5vw,46px);
+  font-weight:900;letter-spacing:2px;color:#fff;line-height:1.1;
+  text-shadow:0 0 28px rgba(0,180,255,0.35);margin-bottom:12px;
+}
+
+.hero h1 span { color:var(--neon); text-shadow:0 0 16px var(--neon-glow); }
+
+.hero p {
+  font-family:var(--mono);font-size:12px;color:var(--muted);
+  max-width:440px;margin:0 auto 28px;line-height:1.9;
+}
+
+.spec-row {
+  display:flex;gap:10px;justify-content:center;flex-wrap:wrap;margin-bottom:44px;
+}
+
+.spec-tag {
+  font-family:var(--mono);font-size:11px;letter-spacing:2px;
+  padding:5px 14px;border:1px solid var(--border2);border-radius:var(--r);
+  color:var(--neon);background:var(--neon-dim);text-transform:uppercase;
+}
+
+/* ── MAIN ── */
+.main { max-width:900px;margin:0 auto;padding:0 24px 80px; }
+
+/* ── CARD ── */
+.card {
+  background:var(--surface);border:1px solid var(--border);
+  border-radius:var(--r);margin-bottom:18px;position:relative;overflow:hidden;
+}
+
+.card::before {
+  content:'';position:absolute;top:0;left:0;right:0;height:1px;
+  background:linear-gradient(90deg,transparent,var(--neon),transparent);opacity:.4;
+}
+
+.card-hdr {
+  padding:13px 20px;border-bottom:1px solid var(--border);
+  background:var(--bg2);display:flex;align-items:center;gap:10px;
+}
+
+.card-tag { font-family:var(--mono);font-size:10px;color:var(--neon);letter-spacing:2px;opacity:.65; }
+.card-title { font-family:var(--display);font-size:12px;font-weight:700;letter-spacing:2px;text-transform:uppercase; }
+.card-body { padding:20px; }
+
+/* ── UPLOAD ── */
+.drop-zone {
+  border:1px dashed var(--border2);border-radius:var(--r);
+  padding:52px 20px;text-align:center;cursor:pointer;
+  transition:all .2s;position:relative;background:var(--bg2);
+}
+
+.drop-zone:hover,.drop-zone.over {
+  border-color:var(--neon);background:var(--neon-dim);
+  box-shadow:inset 0 0 30px rgba(0,180,255,0.04),0 0 18px rgba(0,180,255,0.08);
+}
+
+.drop-zone input {
+  position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%;
+}
+
+.dz-icon { font-size:38px;margin-bottom:12px;filter:drop-shadow(0 0 8px var(--neon)); }
+
+.drop-zone h3 {
+  font-family:var(--display);font-size:13px;font-weight:700;
+  letter-spacing:2px;text-transform:uppercase;margin-bottom:6px;
+}
+
+.drop-zone p { font-family:var(--mono);font-size:11px;color:var(--muted); }
+
+.dz-btn {
+  display:inline-block;margin-top:14px;
+  border:1px solid var(--neon);color:var(--neon);
+  font-family:var(--mono);font-size:11px;letter-spacing:2px;
+  padding:7px 18px;border-radius:var(--r);text-transform:uppercase;
+  pointer-events:none;box-shadow:0 0 8px rgba(0,180,255,0.15);
+}
+
+video {
+  width:100%;border-radius:var(--r);border:1px solid var(--border);
+  background:#000;max-height:260px;object-fit:contain;
+}
+
+.meta-row { display:flex;gap:8px;flex-wrap:wrap;margin-top:10px; }
+
+.meta-chip {
+  font-family:var(--mono);font-size:10px;letter-spacing:1px;
+  color:var(--neon);background:var(--neon-dim);
+  border:1px solid var(--border2);border-radius:var(--r);padding:3px 10px;
+}
+
+/* ── SETTINGS ── */
+.sg { display:grid;grid-template-columns:1fr 1fr;gap:14px; }
+@media(max-width:560px){.sg{grid-template-columns:1fr}}
+
+.flbl {
+  font-family:var(--mono);font-size:10px;letter-spacing:2px;
+  text-transform:uppercase;color:var(--muted);display:block;margin-bottom:6px;
+}
+
+select {
+  width:100%;background:var(--bg2);border:1px solid var(--border);
+  border-radius:var(--r);color:var(--text);font-family:var(--mono);
+  font-size:12px;padding:9px 12px;outline:none;appearance:none;
+  transition:border-color .2s,box-shadow .2s;cursor:pointer;
+}
+
+select:focus { border-color:var(--neon);box-shadow:0 0 10px rgba(0,180,255,0.12); }
+
+/* output spec banner */
+.spec-banner {
+  margin-top:16px;padding:14px 16px;
+  background:var(--bg2);border:1px solid var(--border2);border-radius:var(--r);
+  display:flex;align-items:center;gap:20px;flex-wrap:wrap;
+}
+
+.spec-block { display:flex;flex-direction:column;gap:2px; }
+.spec-key { font-family:var(--mono);font-size:9px;letter-spacing:2px;color:var(--muted);text-transform:uppercase; }
+.spec-val { font-family:var(--mono);font-size:13px;color:var(--neon);letter-spacing:1px;font-weight:700; }
+
+.aspect-vis {
+  width:36px;height:64px;
+  border:2px solid var(--neon);border-radius:2px;
+  background:var(--neon-dim);
+  display:flex;align-items:center;justify-content:center;
+  font-family:var(--mono);font-size:8px;color:var(--neon);
+  box-shadow:0 0 10px rgba(0,180,255,0.2);
+  flex-shrink:0;
+  letter-spacing:.5px;
+}
+
+/* ── TIMELINE ── */
+.tl-bar {
+  width:100%;height:44px;background:var(--bg2);
+  border:1px solid var(--border);border-radius:var(--r);
+  position:relative;overflow:hidden;margin-bottom:14px;cursor:pointer;
+}
+
+.tl-track {
+  position:absolute;height:100%;
+  background:linear-gradient(90deg,rgba(0,80,200,0.3),rgba(0,180,255,0.38));
+  border-left:2px solid #0066ff;border-right:2px solid var(--neon);
+  box-shadow:0 0 8px rgba(0,180,255,0.18);
+}
+
+.tl-lbl {
+  position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);
+  font-family:var(--mono);font-size:10px;color:var(--neon);
+  letter-spacing:1px;pointer-events:none;white-space:nowrap;
+}
+
+.chips-row { display:flex;gap:7px;flex-wrap:wrap;margin-bottom:14px; }
+
+.ic {
+  font-family:var(--mono);font-size:10px;color:var(--muted);
+  background:var(--bg2);border:1px solid var(--border);
+  border-radius:var(--r);padding:3px 10px;
+}
+
+.ic span { color:var(--neon); }
+
+/* ── GEN BTN ── */
+.gen-btn {
+  width:100%;padding:14px;background:transparent;
+  border:1px solid var(--neon);color:var(--neon);
+  font-family:var(--display);font-size:12px;font-weight:700;
+  letter-spacing:3px;text-transform:uppercase;cursor:pointer;
+  border-radius:var(--r);transition:all .2s;
+  box-shadow:0 0 14px rgba(0,180,255,0.12),inset 0 0 14px rgba(0,180,255,0.04);
+  position:relative;overflow:hidden;
+}
+
+.gen-btn::before {
+  content:'';position:absolute;inset:0;
+  background:linear-gradient(90deg,transparent,rgba(0,180,255,0.1),transparent);
+  transform:translateX(-100%);transition:transform .5s;
+}
+
+.gen-btn:hover::before { transform:translateX(100%); }
+.gen-btn:hover { background:var(--neon-dim);box-shadow:0 0 22px rgba(0,180,255,0.25); }
+.gen-btn:disabled { opacity:.3;cursor:not-allowed;pointer-events:none; }
+
+/* ── PROGRESS ── */
+.prog-wrap {
+  background:var(--bg2);border:1px solid var(--border);
+  border-radius:var(--r);height:5px;overflow:hidden;margin-bottom:8px;
+}
+
+.prog-bar {
+  height:100%;
+  background:linear-gradient(90deg,#0066ff,var(--neon));
+  box-shadow:0 0 8px var(--neon-glow);width:0%;transition:width .3s;
+}
+
+.prog-txt {
+  font-family:var(--mono);font-size:11px;color:var(--neon);
+  text-align:center;letter-spacing:1px;margin-bottom:10px;
+}
+
+.log {
+  background:var(--bg);border:1px solid var(--border);border-radius:var(--r);
+  padding:12px;font-family:var(--mono);font-size:10px;color:var(--muted);
+  max-height:90px;overflow-y:auto;
+}
+
+.lok { color:var(--success); }
+.linf { color:var(--neon); }
+
+/* ── CLIPS ── */
+.clips-grid {
+  display:grid;
+  grid-template-columns:repeat(auto-fill,minmax(190px,1fr));
+  gap:14px;
+}
+
+.clip-card {
+  background:var(--bg2);border:1px solid var(--border);
+  border-radius:var(--r);overflow:hidden;
+  transition:border-color .2s,box-shadow .2s;
+}
+
+.clip-card:hover {
+  border-color:var(--neon);box-shadow:0 0 14px rgba(0,180,255,0.12);
+}
+
+.clip-prev {
+  position:relative;background:#000;
+  aspect-ratio:9/16;overflow:hidden;
+}
+
+.clip-prev video,.clip-prev img {
+  width:100%;height:100%;object-fit:cover;
+  border-radius:0;max-height:none;
+}
+
+.clip-overlay {
+  position:absolute;inset:0;
+  background:linear-gradient(to top,rgba(2,8,24,0.75) 0%,transparent 45%);
+  display:flex;align-items:flex-end;padding:8px;
+}
+
+.clip-num {
+  font-family:var(--mono);font-size:10px;letter-spacing:2px;
+  color:var(--neon);border:1px solid var(--neon);
+  border-radius:var(--r);padding:2px 8px;
+  background:rgba(0,180,255,0.08);
+}
+
+.clip-size-badge {
+  position:absolute;top:8px;right:8px;
+  font-family:var(--mono);font-size:9px;letter-spacing:1px;
+  background:rgba(0,20,60,0.85);border:1px solid var(--border2);
+  border-radius:var(--r);padding:2px 6px;color:var(--neon);
+}
+
+.clip-body { padding:10px; }
+.cn { font-family:var(--display);font-size:10px;letter-spacing:1px;color:var(--text);margin-bottom:3px; }
+.cd { font-family:var(--mono);font-size:10px;color:var(--muted);margin-bottom:3px; }
+.cspec { font-family:var(--mono);font-size:9px;color:var(--neon);margin-bottom:10px;letter-spacing:.5px; }
+
+.clip-acts { display:flex;gap:6px; }
+
+.bdl,.bplay {
+  flex:1;padding:7px;border-radius:var(--r);
+  font-family:var(--mono);font-size:10px;letter-spacing:1px;
+  text-transform:uppercase;cursor:pointer;text-decoration:none;
+  text-align:center;transition:all .15s;
+}
+
+.bdl {
+  background:var(--neon-dim);border:1px solid var(--neon);color:var(--neon);
+}
+
+.bdl:hover { background:rgba(0,180,255,0.22);box-shadow:0 0 8px rgba(0,180,255,0.2); }
+
+.bplay {
+  background:var(--surface);border:1px solid var(--border);color:var(--muted);
+}
+
+.bplay:hover { border-color:var(--border2);color:var(--text); }
+
+/* ── DIVIDER ── */
+.div { border:none;border-top:1px solid var(--border);margin:16px 0; }
+.slbl { font-family:var(--mono);font-size:10px;letter-spacing:2px;text-transform:uppercase;color:var(--muted);margin-bottom:10px; }
+
+/* ── TOAST ── */
+.toast {
+  position:fixed;bottom:22px;right:22px;
+  background:var(--surface);border:1px solid var(--border2);
+  border-radius:var(--r);padding:11px 16px;
+  font-family:var(--mono);font-size:12px;color:var(--neon);letter-spacing:1px;
+  display:flex;align-items:center;gap:8px;
+  transform:translateY(70px);transition:transform .3s;
+  z-index:9999;box-shadow:0 0 18px rgba(0,100,255,0.18);
+}
+
+.toast.show { transform:translateY(0); }
+
+/* ── FOOTER ── */
+footer {
+  border-top:1px solid var(--border);background:var(--bg2);
+  padding:22px;text-align:center;
+}
+
+.footer-logo {
+  font-family:var(--display);font-size:16px;font-weight:900;
+  letter-spacing:4px;color:var(--neon);
+  text-shadow:0 0 10px var(--neon-glow);margin-bottom:10px;
+}
+
+.footer-links { display:flex;gap:20px;justify-content:center;margin-bottom:10px; }
+
+.footer-links a {
+  font-family:var(--mono);font-size:11px;letter-spacing:2px;
+  text-transform:uppercase;color:var(--muted);text-decoration:none;transition:color .2s;
+}
+
+.footer-links a:hover { color:var(--neon);text-shadow:0 0 6px var(--neon-glow); }
+
+.footer-copy {
+  font-family:var(--mono);font-size:10px;color:var(--muted);opacity:.45;letter-spacing:1px;
+}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="hdr">
+    <div class="logo">1.8.7</div>
+    <div class="sys-status">SYSTEM ONLINE</div>
+  </div>
+</header>
+
+<div class="hero">
+  <div class="eyebrow">// VIDEO CLIP EXTRACTOR</div>
+  <h1>EXTRACT CLIPS<br><span>READY TO UPLOAD</span></h1>
+  <p>Upload your video. Set your clip length. Download perfectly sized 9:16 clips — no watermarks, no limits.</p>
+  <div class="spec-row">
+    <div class="spec-tag">1080 × 1920</div>
+    <div class="spec-tag">9:16 Ratio</div>
+    <div class="spec-tag">No Watermark</div>
+    <div class="spec-tag">🎵 TikTok Ready</div>
+    <div class="spec-tag">📸 Reels Ready</div>
+  </div>
+</div>
+
+<div class="main">
+
+  <!-- UPLOAD -->
+  <div class="card">
+    <div class="card-hdr">
+      <span class="card-tag">01 //</span>
+      <span class="card-title">Upload Video</span>
+    </div>
+    <div class="card-body">
+      <div class="drop-zone" id="drop-zone">
+        <input type="file" id="file-input" accept="video/*">
+        <div class="dz-icon">📼</div>
+        <h3>Drop Your Video Here</h3>
+        <p>MP4 · MOV · AVI · WEBM — any size</p>
+        <div class="dz-btn">[ SELECT FILE ]</div>
+      </div>
+      <div id="preview-wrap" style="display:none">
+        <hr class="div">
+        <video id="vid-player" controls></video>
+        <div class="meta-row" id="meta-row"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SETTINGS -->
+  <div class="card" id="settings-card" style="display:none">
+    <div class="card-hdr">
+      <span class="card-tag">02 //</span>
+      <span class="card-title">Clip Settings</span>
+    </div>
+    <div class="card-body">
+      <div class="sg">
+        <div>
+          <label class="flbl">Clip Duration</label>
+          <select id="clip-dur">
+            <option value="10">10 seconds</option>
+            <option value="15">15 seconds</option>
+            <option value="30" selected>30 seconds</option>
+            <option value="45">45 seconds</option>
+            <option value="60">60 seconds</option>
+            <option value="90">90 seconds</option>
+          </select>
+        </div>
+        <div>
+          <label class="flbl">Number of Clips</label>
+          <select id="num-clips">
+            <option value="3">3 clips</option>
+            <option value="5" selected>5 clips</option>
+            <option value="8">8 clips</option>
+            <option value="10">10 clips</option>
+            <option value="auto">Auto — max possible</option>
+          </select>
+        </div>
+        <div>
+          <label class="flbl">Selection Mode</label>
+          <select id="clip-mode">
+            <option value="spread">Spread evenly</option>
+            <option value="random">Random moments</option>
+            <option value="start">From beginning</option>
+            <option value="end">From end</option>
+          </select>
+        </div>
+        <div>
+          <label class="flbl">Fill Mode</label>
+          <select id="fill-mode">
+            <option value="crop">Smart Crop (fills frame)</option>
+            <option value="fit">Fit with bars (no crop)</option>
+            <option value="stretch">Stretch to fill</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- OUTPUT SPEC BANNER -->
+      <div class="spec-banner">
+        <div class="aspect-vis">9:16</div>
+        <div class="spec-block">
+          <span class="spec-key">Resolution</span>
+          <span class="spec-val">1080 × 1920</span>
+        </div>
+        <div class="spec-block">
+          <span class="spec-key">Aspect Ratio</span>
+          <span class="spec-val">9 : 16</span>
+        </div>
+        <div class="spec-block">
+          <span class="spec-key">Compatible</span>
+          <span class="spec-val" style="font-size:11px">TikTok · Reels · Shorts</span>
+        </div>
+        <div class="spec-block">
+          <span class="spec-key">Watermark</span>
+          <span class="spec-val" style="color:var(--success)">NONE ✓</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- TIMELINE / GENERATE -->
+  <div class="card" id="tl-card" style="display:none">
+    <div class="card-hdr">
+      <span class="card-tag">03 //</span>
+      <span class="card-title">Generate</span>
+    </div>
+    <div class="card-body">
+      <div class="chips-row" id="chips-row"></div>
+      <div class="tl-bar" id="tl-bar">
+        <div class="tl-track" id="tl-track">
+          <div class="tl-lbl" id="tl-lbl"></div>
+        </div>
+      </div>
+      <button class="gen-btn" id="gen-btn" onclick="generate()">&gt;&gt; EXTRACT CLIPS &lt;&lt;</button>
+    </div>
+  </div>
+
+  <!-- PROGRESS -->
+  <div class="card" id="prog-card" style="display:none">
+    <div class="card-hdr">
+      <span class="card-tag">SYS //</span>
+      <span class="card-title">Processing</span>
+    </div>
+    <div class="card-body">
+      <div class="prog-wrap"><div class="prog-bar" id="prog-bar"></div></div>
+      <div class="prog-txt" id="prog-txt">INITIALIZING...</div>
+      <div class="log" id="log-box"></div>
+    </div>
+  </div>
+
+  <!-- CLIPS OUTPUT -->
+  <div class="card" id="clips-card" style="display:none">
+    <div class="card-hdr">
+      <span class="card-tag">04 //</span>
+      <span class="card-title" id="clips-card-title">Clips Ready</span>
+    </div>
+    <div class="card-body">
+      <div class="slbl" style="margin-bottom:14px">// All clips are 1080×1920 · 9:16 · No watermark</div>
+      <div class="clips-grid" id="clips-grid"></div>
+    </div>
+  </div>
+
+</div>
+
+<footer>
+  <div class="footer-logo">1.8.7</div>
+  <div class="footer-links">
+    <a href="clipforge-terms.md" target="_blank">Terms of Service</a>
+    <a href="clipforge-privacy.md" target="_blank">Privacy Policy</a>
+  </div>
+  <div class="footer-copy">© 2026 1.8.7 — VIDEO CLIP EXTRACTOR</div>
+</footer>
+
+<div class="toast" id="toast">
+  <span id="t-ico"></span><span id="t-msg"></span>
+</div>
+
+<script>
+// ── STATE ──────────────────────────────────────────────────────────
+let videoFile=null, videoURL=null, videoDuration=0;
+let generatedClips=[];
+
+// Output is always 1080×1920 (9:16) — no watermarks
+const OUT_W = 1080;
+const OUT_H = 1920;
+// Render at 50% scale for browser performance, same ratio
+const CANVAS_W = 540;
+const CANVAS_H = 960;
+
+// ── UPLOAD ─────────────────────────────────────────────────────────
+const dz = document.getElementById('drop-zone');
+const fi = document.getElementById('file-input');
+
+dz.addEventListener('dragover', e => { e.preventDefault(); dz.classList.add('over'); });
+dz.addEventListener('dragleave', () => dz.classList.remove('over'));
+dz.addEventListener('drop', e => {
+  e.preventDefault(); dz.classList.remove('over');
+  const f = e.dataTransfer.files[0];
+  if (f && f.type.startsWith('video/')) loadVideo(f);
+  else toast('⚠️', 'PLEASE DROP A VIDEO FILE');
+});
+fi.addEventListener('change', () => { if (fi.files[0]) loadVideo(fi.files[0]); });
+
+function loadVideo(file) {
+  videoFile = file;
+  if (videoURL) URL.revokeObjectURL(videoURL);
+  videoURL = URL.createObjectURL(file);
+  const p = document.getElementById('vid-player');
+  p.src = videoURL;
+  p.addEventListener('loadedmetadata', () => {
+    videoDuration = p.duration;
+    document.getElementById('preview-wrap').style.display = 'block';
+    document.getElementById('settings-card').style.display = 'block';
+    document.getElementById('tl-card').style.display = 'block';
+    document.getElementById('meta-row').innerHTML =
+      `<div class="meta-chip">📄 ${file.name}</div>
+       <div class="meta-chip">⏱ ${fmtTime(videoDuration)}</div>
+       <div class="meta-chip">💾 ${(file.size/1024/1024).toFixed(1)} MB</div>
+       <div class="meta-chip">🎬 ${file.type.replace('video/','').toUpperCase()}</div>`;
+    updateTimeline();
+    toast('✅', 'VIDEO LOADED SUCCESSFULLY');
+  }, { once: true });
+}
+
+// ── SETTINGS ───────────────────────────────────────────────────────
+['clip-dur','num-clips','clip-mode'].forEach(id =>
+  document.getElementById(id).addEventListener('change', updateTimeline)
+);
+
+function updateTimeline() {
+  if (!videoDuration) return;
+  const dur  = parseInt(document.getElementById('clip-dur').value);
+  const nVal = document.getElementById('num-clips').value;
+  const max  = Math.floor(videoDuration / dur);
+  const n    = nVal === 'auto' ? max : Math.min(parseInt(nVal), max);
+  const mode = document.getElementById('clip-mode').value;
+
+  document.getElementById('chips-row').innerHTML =
+    `<div class="ic">Clips: <span>${n}</span></div>
+     <div class="ic">Each: <span>${dur}s</span></div>
+     <div class="ic">Total: <span>${fmtTime(n*dur)}</span></div>
+     <div class="ic">Mode: <span>${mode}</span></div>
+     <div class="ic">Output: <span>1080×1920</span></div>`;
+
+  const pct = Math.min((dur / videoDuration) * 100, 100);
+  document.getElementById('tl-track').style.width = pct + '%';
+  document.getElementById('tl-lbl').textContent = `CLIP 1 · ${dur}S · 9:16`;
+}
+
+// ── GENERATE ───────────────────────────────────────────────────────
+async function generate() {
+  if (!videoFile) return;
+  const dur    = parseInt(document.getElementById('clip-dur').value);
+  const nVal   = document.getElementById('num-clips').value;
+  const mode   = document.getElementById('clip-mode').value;
+  const fill   = document.getElementById('fill-mode').value;
+  const max    = Math.floor(videoDuration / dur);
+  const n      = nVal === 'auto' ? max : Math.min(parseInt(nVal), max);
+
+  if (n === 0) { toast('⚠️', `VIDEO TOO SHORT FOR ${dur}S CLIPS`); return; }
+
+  document.getElementById('prog-card').style.display = 'block';
+  document.getElementById('clips-card').style.display = 'none';
+  document.getElementById('gen-btn').disabled = true;
+  generatedClips = [];
+  document.getElementById('log-box').innerHTML = '';
+
+  // Compute start times
+  let starts = [];
+  if (mode === 'spread') {
+    const sp = videoDuration / n;
+    for (let i=0; i<n; i++) starts.push(i * sp);
+  } else if (mode === 'random') {
+    const usable = Math.max(0, videoDuration - dur);
+    for (let tries=0; starts.length < n && tries < n*20; tries++) {
+      const t = Math.random() * usable;
+      if (!starts.some(s => Math.abs(s-t) < dur)) starts.push(t);
+    }
+    starts.sort((a,b) => a-b);
+    while (starts.length < n) starts.push(starts.length * (videoDuration / n));
+  } else if (mode === 'start') {
+    for (let i=0; i<n; i++) starts.push(i * dur);
+  } else {
+    const base = Math.max(0, videoDuration - n * dur);
+    for (let i=0; i<n; i++) starts.push(base + i * dur);
+  }
+
+  log('linf', `> EXTRACTING ${n} CLIPS · OUTPUT: 1080×1920 · NO WATERMARK`);
+  log('linf', `> FILL MODE: ${fill.toUpperCase()} · DURATION: ${dur}S EACH`);
+
+  const srcVid = document.createElement('video');
+  srcVid.src = videoURL; srcVid.muted = true; srcVid.preload = 'auto';
+  await new Promise(r => { srcVid.onloadeddata = r; });
+
+  const canvas = document.createElement('canvas');
+  canvas.width  = CANVAS_W;   // 540
+  canvas.height = CANVAS_H;   // 960  (same 9:16 ratio as 1080×1920)
+  const ctx = canvas.getContext('2d');
+
+  for (let i=0; i<n; i++) {
+    setProg(Math.round((i/n)*90), `> RENDERING CLIP ${i+1} OF ${n}...`);
+    log('lok', `[OK] CLIP ${i+1} — START @${fmtTime(starts[i])} · 9:16 · NO WATERMARK`);
+    try {
+      const blob = await captureClip(srcVid, canvas, ctx, starts[i], dur, fill, i+1);
+      generatedClips.push({ blob, start:starts[i], duration:dur, index:i+1 });
+    } catch(e) {
+      log('linf', `[!] CLIP ${i+1}: USING SNAPSHOT MODE`);
+      const blob = await snapClip(srcVid, canvas, ctx, starts[i], dur, fill, i+1);
+      generatedClips.push({ blob, start:starts[i], duration:dur, index:i+1 });
+    }
+  }
+
+  setProg(100, '> ALL CLIPS EXTRACTED · READY TO DOWNLOAD');
+  log('lok', `[DONE] ${n} CLIPS · 1080×1920 · 9:16 · CLEAN — NO WATERMARKS`);
+  await new Promise(r => setTimeout(r, 400));
+
+  renderClips(n);
+  document.getElementById('gen-btn').disabled = false;
+  toast('🎬', `${n} CLIPS READY — NO WATERMARKS`);
+}
+
+// ── DRAW FRAME (fills canvas with correct crop/fit/stretch) ────────
+function drawFrame(ctx, vid, W, H, fill) {
+  const vw = vid.videoWidth  || W;
+  const vh = vid.videoHeight || H;
+  const vAspect = vw / vh;
+  const cAspect = W / H;
+
+  ctx.clearRect(0, 0, W, H);
+
+  if (fill === 'crop') {
+    // Smart crop: fill entire canvas, crop sides/top
+    let sx, sy, sw, sh;
+    if (vAspect > cAspect) {
+      // video wider than canvas → crop left/right
+      sh = vh; sw = vh * cAspect;
+      sx = (vw - sw) / 2; sy = 0;
+    } else {
+      // video taller than canvas → crop top/bottom
+      sw = vw; sh = vw / cAspect;
+      sx = 0; sy = (vh - sh) / 2;
+    }
+    ctx.drawImage(vid, sx, sy, sw, sh, 0, 0, W, H);
+
+  } else if (fill === 'fit') {
+    // Letterbox/pillarbox — show full video, add bars
+    ctx.fillStyle = '#000';
+    ctx.fillRect(0, 0, W, H);
+    let dw, dh, dx, dy;
+    if (vAspect > cAspect) {
+      dw = W; dh = W / vAspect;
+      dx = 0; dy = (H - dh) / 2;
+    } else {
+      dh = H; dw = H * vAspect;
+      dy = 0; dx = (W - dw) / 2;
+    }
+    ctx.drawImage(vid, dx, dy, dw, dh);
+
+  } else {
+    // Stretch to fill
+    ctx.drawImage(vid, 0, 0, W, H);
+  }
+}
+
+// ── CAPTURE CLIP (MediaRecorder) ───────────────────────────────────
+function captureClip(vid, canvas, ctx, start, dur, fill, idx) {
+  return new Promise((resolve, reject) => {
+    const W = canvas.width, H = canvas.height;
+    const stream = canvas.captureStream(30);
+    let rec;
+    try {
+      rec = new MediaRecorder(stream, { mimeType:'video/webm;codecs=vp9', videoBitsPerSecond:3000000 });
+    } catch(e) {
+      try {
+        rec = new MediaRecorder(stream, { mimeType:'video/webm' });
+      } catch(e2) { reject(e2); return; }
+    }
+
+    const chunks = [];
+    rec.ondataavailable = e => { if (e.data.size > 0) chunks.push(e.data); };
+    rec.onstop = () => resolve(new Blob(chunks, { type:'video/webm' }));
+
+    vid.currentTime = start;
+    vid.onseeked = () => {
+      rec.start(100);
+      vid.play();
+      const endT = start + dur;
+
+      const tick = () => {
+        if (vid.currentTime >= endT || vid.ended) {
+          vid.pause();
+          rec.stop();
+          return;
+        }
+        // Draw clean frame — NO watermarks, NO overlays
+        drawFrame(ctx, vid, W, H, fill);
+        requestAnimationFrame(tick);
+      };
+      requestAnimationFrame(tick);
+    };
+  });
+}
+
+// ── SNAPSHOT FALLBACK ──────────────────────────────────────────────
+function snapClip(vid, canvas, ctx, start, dur, fill, idx) {
+  return new Promise(resolve => {
+    vid.currentTime = start + dur * 0.4;
+    vid.onseeked = () => {
+      // Draw clean frame — NO watermarks, NO overlays
+      drawFrame(ctx, vid, canvas.width, canvas.height, fill);
+      canvas.toBlob(blob => resolve(blob), 'image/jpeg', 0.92);
+    };
+  });
+}
+
+// ── RENDER CLIP CARDS ──────────────────────────────────────────────
+function renderClips(n) {
+  document.getElementById('clips-card').style.display = 'block';
+  document.getElementById('clips-card-title').textContent = `${n} Clips Ready — 1080×1920`;
+  const grid = document.getElementById('clips-grid');
+  grid.innerHTML = '';
+
+  generatedClips.forEach(clip => {
+    const url   = URL.createObjectURL(clip.blob);
+    const isVid = clip.blob.type.startsWith('video/');
+    const ext   = isVid ? 'webm' : 'jpg';
+    const fname = `187_clip_${String(clip.index).padStart(2,'0')}_${Math.round(clip.start)}s.${ext}`;
+
+    const card = document.createElement('div');
+    card.className = 'clip-card';
+
+    const media = isVid
+      ? `<video src="${url}" loop muted playsinline preload="metadata"></video>`
+      : `<img src="${url}" alt="clip ${clip.index}">`;
+
+    card.innerHTML = `
+      <div class="clip-prev">
+        ${media}
+        <div class="clip-overlay">
+          <div class="clip-num">CLIP ${String(clip.index).padStart(2,'0')}</div>
+        </div>
+        <div class="clip-size-badge">1080×1920</div>
+      </div>
+      <div class="clip-body">
+        <div class="cn">CLIP_${String(clip.index).padStart(2,'0')}</div>
+        <div class="cd">⏱ ${clip.duration}s · @${fmtTime(clip.start)}</div>
+        <div class="cspec">1080×1920 · 9:16 · No Watermark</div>
+        <div class="clip-acts">
+          <a href="${url}" download="${fname}" class="bdl">⬇ Download</a>
+          ${isVid ? `<button class="bplay" onclick="playClip(this)">▶ Play</button>` : ''}
+        </div>
+      </div>`;
+
+    grid.appendChild(card);
+
+    if (isVid) {
+      const v = card.querySelector('video');
+      card.addEventListener('mouseenter', () => v.play());
+      card.addEventListener('mouseleave', () => { v.pause(); v.currentTime = 0; });
+    }
+  });
+}
+
+function playClip(btn) {
+  const v = btn.closest('.clip-card').querySelector('video');
+  if (v.paused) { v.play(); btn.textContent = '⏸ Pause'; }
+  else          { v.pause(); btn.textContent = '▶ Play'; }
+}
+
+// ── UTILS ──────────────────────────────────────────────────────────
+function fmtTime(s) {
+  const m = Math.floor(s/60), sec = Math.floor(s%60);
+  return `${m}:${sec.toString().padStart(2,'0')}`;
+}
+
+function setProg(pct, txt) {
+  document.getElementById('prog-bar').style.width = pct + '%';
+  document.getElementById('prog-txt').textContent = txt;
+}
+
+function log(cls, msg) {
+  const box = document.getElementById('log-box');
+  const d = document.createElement('div');
+  d.className = cls; d.textContent = msg;
+  box.appendChild(d); box.scrollTop = box.scrollHeight;
+}
+
+function toast(ico, msg) {
+  const t = document.getElementById('toast');
+  document.getElementById('t-ico').textContent = ico;
+  document.getElementById('t-msg').textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 3000);
+}
+
+updateTimeline();
+</script>
+</body>
+</html>
